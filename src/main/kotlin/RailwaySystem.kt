@@ -1,5 +1,16 @@
 class RailwaySystem(
-    val stations: Map<Int, Station>,
-    val edges: Map<Int, List<Int>>,
-    val start: Int
+    val stations: Map<StationId, Station>,
+    val edges: Map<StationId, List<StationId>>,
+    val start: StationId
+)
+
+@JvmInline
+value class StationId(val value: Int)
+
+@JvmInline
+value class CargoType(val value: Int)
+
+data class Station(
+    val unload: CargoType,
+    val load: CargoType,
 )
