@@ -22,4 +22,24 @@ class CargoAnalysisTest {
         assertEquals(setOf(CargoType(1)), result[StationId(2)])
         assertEquals(setOf(CargoType(1), CargoType(2)), result[StationId(3)])
     }
+
+    @Test
+    fun parsesAndAnalyzesExampleInput() {
+        val lines = listOf(
+            "3 2",
+            "1 99 1",
+            "2 99 2",
+            "3 99 3",
+            "1 2",
+            "2 3",
+            "1"
+        )
+
+        val system = parseSystem(lines)
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        assertEquals(emptySet<CargoType>(), result[StationId(1)])
+        assertEquals(setOf(CargoType(1)), result[StationId(2)])
+        assertEquals(setOf(CargoType(1), CargoType(2)), result[StationId(3)])
+    }
 }
