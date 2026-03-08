@@ -1,5 +1,6 @@
 fun main() {
-    val system = parseSystem(generateSequence(::readLine).toList())
+    val lines = generateSequence(::readlnOrNull).toList()
+    val system = parseSystem(lines)
 
     val analysis = CargoAnalysis(system)
     val result = analysis.computeArrivalCargo()

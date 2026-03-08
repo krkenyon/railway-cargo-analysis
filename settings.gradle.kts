@@ -1,1 +1,1 @@
-rootProject.name = "railway-cargo-analysis"
+rootProject.name = "railway"
