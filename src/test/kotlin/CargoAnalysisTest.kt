@@ -119,4 +119,23 @@ class CargoAnalysisTest {
         assertEquals(setOf(CargoType(1)), result[StationId(2)])
         assertEquals(setOf(CargoType(2)), result[StationId(3)])
     }
+
+    @Test
+    fun `unreachable stations do not gain cargo from start component`() {
+        val stations = mapOf(
+            StationId(1) to Station(CargoType(99), CargoType(1)),
+            StationId(2) to Station(CargoType(99), CargoType(2)),
+            StationId(3) to Station(CargoType(99), CargoType(3))
+        )
+
+        val edges = mapOf(
+            StationId(1) to listOf(StationId(2))
+        )
+
+        val system = RailwaySystem(stations, edges, StationId(1))
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        assertEquals(emptySet<CargoType>(), result[StationId(1)])
+        assertEquals(setOf(CargoType(1)), result[StationId(2)])
+    }
 }
