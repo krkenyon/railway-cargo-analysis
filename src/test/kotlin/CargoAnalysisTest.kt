@@ -139,4 +139,48 @@ class CargoAnalysisTest {
         assertEquals(setOf(CargoType(1)), result[StationId(2)])
         assertEquals(emptySet<CargoType>(), result[StationId(3)])
     }
+
+    @Test
+    fun `cargo stabilizes in cycle`() {
+        val stations = mapOf(
+            StationId(1) to Station(unload = CargoType(99), load = CargoType(1)),
+            StationId(2) to Station(unload = CargoType(99), load = CargoType(2)),
+            StationId(3) to Station(unload = CargoType(99), load = CargoType(3))
+        )
+
+        val edges = mapOf(
+            StationId(1) to listOf(StationId(2)),
+            StationId(2) to listOf(StationId(3)),
+            StationId(3) to listOf(StationId(1))
+        )
+
+        val system = RailwaySystem(stations, edges, start = StationId(1))
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        for (stationWithArrivals in result) {
+            assertEquals(setOf(CargoType(1), CargoType(2), CargoType(3)), stationWithArrivals.value)
+        }
+    }
+
+    @Test
+    fun `cargo propagation in cycle reaches fixed point`() {
+        val stations = mapOf(
+            StationId(1) to Station(CargoType(99), CargoType(1)),
+            StationId(2) to Station(CargoType(99), CargoType(2)),
+            StationId(3) to Station(CargoType(99), CargoType(3))
+        )
+
+        val edges = mapOf(
+            StationId(1) to listOf(StationId(2)),
+            StationId(2) to listOf(StationId(3)),
+            StationId(3) to listOf(StationId(2))
+        )
+
+        val system = RailwaySystem(stations, edges, StationId(1))
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        assertEquals(emptySet<CargoType>(), result[StationId(1)])
+        assertEquals(setOf(CargoType(1), CargoType(2), CargoType(3)), result[StationId(2)])
+        assertEquals(setOf(CargoType(1), CargoType(3), CargoType(2)), result[StationId(3)])
+    }
 }
