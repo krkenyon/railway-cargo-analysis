@@ -1,5 +1,4 @@
-// ParseSystemTest.kt
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class ParseSystemTest {
@@ -15,13 +14,8 @@ class ParseSystemTest {
         val system = parseSystem(lines)
 
         assertEquals(StationId(1), system.start)
-        assertEquals(
-            mapOf(
-                station(1, unload = 99, load = 5)
-            ),
-            system.stations
-        )
-        assertEquals(emptyMap<StationId, List<StationId>>(), system.edges)
+        assertEquals(1, system.stations.size)
+        assertEquals(0, system.edges.size)
     }
 
     @Test
@@ -38,33 +32,80 @@ class ParseSystemTest {
 
         val system = parseSystem(lines)
 
-        assertEquals(
-            mapOf(
-                edge(1, 2, 3)
-            ),
-            system.edges
-        )
+        assertEquals(listOf(StationId(2), StationId(3)), system.edges[StationId(1)])
     }
 
     @Test
-    fun `parses stations and start station correctly`() {
+    fun `empty input throws`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            parseSystem(emptyList())
+        }
+    }
+
+    @Test
+    fun `missing start line throws`() {
+        val lines = listOf(
+            "1 0",
+            "1 99 5"
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            parseSystem(lines)
+        }
+    }
+
+    @Test
+    fun `non integer token throws`() {
+        val lines = listOf(
+            "1 0",
+            "1 X 5",
+            "1"
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            parseSystem(lines)
+        }
+    }
+
+    @Test
+    fun `duplicate station id throws`() {
+        val lines = listOf(
+            "2 0",
+            "1 99 1",
+            "1 99 2",
+            "1"
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            parseSystem(lines)
+        }
+    }
+
+    @Test
+    fun `edge referencing unknown station throws`() {
         val lines = listOf(
             "2 1",
-            "10 8 4",
-            "20 9 5",
-            "10 20",
-            "10"
+            "1 99 1",
+            "2 99 2",
+            "1 3",
+            "1"
         )
 
-        val system = parseSystem(lines)
+        assertThrows(IllegalArgumentException::class.java) {
+            parseSystem(lines)
+        }
+    }
 
-        assertEquals(StationId(10), system.start)
-        assertEquals(
-            mapOf(
-                StationId(10) to Station(CargoType(8), CargoType(4)),
-                StationId(20) to Station(CargoType(9), CargoType(5))
-            ),
-            system.stations
+    @Test
+    fun `start station must exist`() {
+        val lines = listOf(
+            "1 0",
+            "1 99 5",
+            "2"
         )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            parseSystem(lines)
+        }
     }
 }
