@@ -137,5 +137,6 @@ class CargoAnalysisTest {
 
         assertEquals(emptySet<CargoType>(), result[StationId(1)])
         assertEquals(setOf(CargoType(1)), result[StationId(2)])
+        assertEquals(emptySet<CargoType>(), result[StationId(3)])
     }
 }
