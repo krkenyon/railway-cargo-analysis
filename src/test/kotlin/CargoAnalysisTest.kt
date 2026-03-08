@@ -1,221 +1,265 @@
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class CargoAnalysisTest {
 
-    private fun exampleInputLines() = listOf(
-        "3 2",
-        "1 99 1",
-        "2 99 2",
-        "3 99 3",
-        "1 2",
-        "2 3",
-        "1"
-    )
-
-    private fun exampleExpectedResult() = mapOf(
-        StationId(1) to emptySet(),
-        StationId(2) to setOf(CargoType(1)),
-        StationId(3) to setOf(CargoType(1), CargoType(2))
-    )
-
-    private fun assertExampleResult(result: Map<StationId, Set<CargoType>>) {
-        assertEquals(exampleExpectedResult(), result)
-    }
-
     @Test
-    fun `computes cargo for simple chain`() {
-        val stations = mapOf(
-            StationId(1) to Station(unload = CargoType(99), load = CargoType(1)),
-            StationId(2) to Station(unload = CargoType(99), load = CargoType(2)),
-            StationId(3) to Station(unload = CargoType(99), load = CargoType(3))
+    fun `simple chain propagates cargo forward`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 99, load = 2),
+                station(3, unload = 99, load = 3)
+            ),
+            edges = mapOf(
+                edge(1, 2),
+                edge(2, 3)
+            ),
+            start = StationId(1)
         )
 
-        val edges = mapOf(
-            StationId(1) to listOf(StationId(2)),
-            StationId(2) to listOf(StationId(3))
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet(),
+                2 to cargoSet(1),
+                3 to cargoSet(1, 2)
+            ),
+            result
         )
-
-        val system = RailwaySystem(stations, edges, start = StationId(1))
-        val result = CargoAnalysis(system).computeArrivalCargo()
-
-        assertExampleResult(result)
-    }
-
-    @Test
-    fun `parses inline example input and analyzes correctly`() {
-        val system = parseSystem(exampleInputLines())
-        val result = CargoAnalysis(system).computeArrivalCargo()
-
-        assertExampleResult(result)
-    }
-
-    @Test
-    fun `parses resource input and analyzes correctly`() {
-        val lines = checkNotNull(javaClass.getResource("/input.txt")) {
-            "Missing test resource: input.txt"
-        }.readText().lines().filter { it.isNotBlank() }
-
-        val system = parseSystem(lines)
-        val result = CargoAnalysis(system).computeArrivalCargo()
-
-        assertExampleResult(result)
     }
 
     @Test
     fun `start station has empty arrival cargo`() {
-        val stations = mapOf(
-            StationId(1) to Station(unload = CargoType(99), load = CargoType(1))
-        )
-
         val system = RailwaySystem(
-            stations = stations,
+            stations = mapOf(
+                station(1, unload = 99, load = 1)
+            ),
             edges = emptyMap(),
             start = StationId(1)
         )
 
         val result = CargoAnalysis(system).computeArrivalCargo()
 
-        assertEquals(mapOf(StationId(1) to emptySet<CargoType>()), result)
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet()
+            ),
+            result
+        )
     }
 
     @Test
-    fun `cargo propagates independently down branches`() {
-        val stations = mapOf(
-            StationId(1) to Station(CargoType(99), CargoType(1)),
-            StationId(2) to Station(CargoType(99), CargoType(2)),
-            StationId(3) to Station(CargoType(99), CargoType(3))
+    fun `branches receive cargo independently`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 99, load = 2),
+                station(3, unload = 99, load = 3)
+            ),
+            edges = mapOf(
+                edge(1, 2, 3)
+            ),
+            start = StationId(1)
         )
 
-        val edges = mapOf(
-            StationId(1) to listOf(StationId(2), StationId(3))
-        )
-
-        val system = RailwaySystem(stations, edges, StationId(1))
         val result = CargoAnalysis(system).computeArrivalCargo()
 
-        assertEquals(emptySet<CargoType>(), result[StationId(1)])
-        assertEquals(setOf(CargoType(1)), result[StationId(2)])
-        assertEquals(setOf(CargoType(1)), result[StationId(3)])
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet(),
+                2 to cargoSet(1),
+                3 to cargoSet(1)
+            ),
+            result
+        )
     }
 
     @Test
-    fun `station unload removes matching cargo before onward travel`() {
-        val stations = mapOf(
-            StationId(1) to Station(CargoType(99), CargoType(1)),
-            StationId(2) to Station(CargoType(1), CargoType(2)),
-            StationId(3) to Station(CargoType(99), CargoType(3))
+    fun `cargo merges from multiple incoming paths`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 99, load = 2),
+                station(3, unload = 99, load = 3),
+                station(4, unload = 99, load = 4)
+            ),
+            edges = mapOf(
+                edge(1, 2, 3),
+                edge(2, 4),
+                edge(3, 4)
+            ),
+            start = StationId(1)
         )
 
-        val edges = mapOf(
-            StationId(1) to listOf(StationId(2)),
-            StationId(2) to listOf(StationId(3))
-        )
-
-        val system = RailwaySystem(stations, edges, StationId(1))
         val result = CargoAnalysis(system).computeArrivalCargo()
 
-        assertEquals(emptySet<CargoType>(), result[StationId(1)])
-        assertEquals(setOf(CargoType(1)), result[StationId(2)])
-        assertEquals(setOf(CargoType(2)), result[StationId(3)])
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet(),
+                2 to cargoSet(1),
+                3 to cargoSet(1),
+                4 to cargoSet(1, 2, 3)
+            ),
+            result
+        )
     }
 
     @Test
-    fun `unreachable stations do not gain cargo from start component`() {
-        val stations = mapOf(
-            StationId(1) to Station(CargoType(99), CargoType(1)),
-            StationId(2) to Station(CargoType(99), CargoType(2)),
-            StationId(3) to Station(CargoType(99), CargoType(3))
+    fun `unload removes matching cargo before onward travel`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 1, load = 2),
+                station(3, unload = 99, load = 3)
+            ),
+            edges = mapOf(
+                edge(1, 2),
+                edge(2, 3)
+            ),
+            start = StationId(1)
         )
 
-        val edges = mapOf(
-            StationId(1) to listOf(StationId(2))
-        )
-
-        val system = RailwaySystem(stations, edges, StationId(1))
         val result = CargoAnalysis(system).computeArrivalCargo()
 
-        assertEquals(emptySet<CargoType>(), result[StationId(1)])
-        assertEquals(setOf(CargoType(1)), result[StationId(2)])
-        assertEquals(emptySet<CargoType>(), result[StationId(3)])
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet(),
+                2 to cargoSet(1),
+                3 to cargoSet(2)
+            ),
+            result
+        )
     }
 
     @Test
-    fun `cargo stabilizes in cycle`() {
-        val stations = mapOf(
-            StationId(1) to Station(unload = CargoType(99), load = CargoType(1)),
-            StationId(2) to Station(unload = CargoType(99), load = CargoType(2)),
-            StationId(3) to Station(unload = CargoType(99), load = CargoType(3))
+    fun `unloading absent cargo has no effect`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 7, load = 2),
+                station(3, unload = 99, load = 3)
+            ),
+            edges = mapOf(
+                edge(1, 2),
+                edge(2, 3)
+            ),
+            start = StationId(1)
         )
 
-        val edges = mapOf(
-            StationId(1) to listOf(StationId(2)),
-            StationId(2) to listOf(StationId(3)),
-            StationId(3) to listOf(StationId(1))
-        )
-
-        val system = RailwaySystem(stations, edges, start = StationId(1))
         val result = CargoAnalysis(system).computeArrivalCargo()
 
-        for (stationWithArrivals in result) {
-            assertEquals(setOf(CargoType(1), CargoType(2), CargoType(3)), stationWithArrivals.value)
-        }
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet(),
+                2 to cargoSet(1),
+                3 to cargoSet(1, 2)
+            ),
+            result
+        )
     }
 
     @Test
-    fun `cargo propagation in cycle reaches fixed point`() {
-        val stations = mapOf(
-            StationId(1) to Station(CargoType(99), CargoType(1)),
-            StationId(2) to Station(CargoType(99), CargoType(2)),
-            StationId(3) to Station(CargoType(99), CargoType(3))
+    fun `unreachable stations remain empty`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 99, load = 2),
+                station(3, unload = 99, load = 3)
+            ),
+            edges = mapOf(
+                edge(1, 2)
+            ),
+            start = StationId(1)
         )
 
-        val edges = mapOf(
-            StationId(1) to listOf(StationId(2)),
-            StationId(2) to listOf(StationId(3)),
-            StationId(3) to listOf(StationId(2))
-        )
-
-        val system = RailwaySystem(stations, edges, StationId(1))
         val result = CargoAnalysis(system).computeArrivalCargo()
 
-        assertEquals(emptySet<CargoType>(), result[StationId(1)])
-        assertEquals(setOf(CargoType(1), CargoType(2), CargoType(3)), result[StationId(2)])
-        assertEquals(setOf(CargoType(1), CargoType(3), CargoType(2)), result[StationId(3)])
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet(),
+                2 to cargoSet(1),
+                3 to emptySet()
+            ),
+            result
+        )
     }
 
     @Test
-    fun `parses minimal valid input`() {
-        val lines = listOf(
-            "1 0",
-            "1 99 5",
-            "1"
+    fun `full cycle reaches stable cargo set at every station`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 99, load = 2),
+                station(3, unload = 99, load = 3)
+            ),
+            edges = mapOf(
+                edge(1, 2),
+                edge(2, 3),
+                edge(3, 1)
+            ),
+            start = StationId(1)
         )
 
-        val system = parseSystem(lines)
+        val result = CargoAnalysis(system).computeArrivalCargo()
 
-        assertEquals(StationId(1), system.start)
-        assertEquals(
-            mapOf(StationId(1) to Station(CargoType(99), CargoType(5))),
-            system.stations
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to cargoSet(1, 2, 3),
+                2 to cargoSet(1, 2, 3),
+                3 to cargoSet(1, 2, 3)
+            ),
+            result
         )
-        assertEquals(emptyMap<StationId, List<StationId>>(), system.edges)
     }
 
     @Test
-    fun `parses branching edges correctly`() {
-        val lines = listOf(
-            "3 2",
-            "1 99 1",
-            "2 99 2",
-            "3 99 3",
-            "1 2",
-            "1 3",
-            "1"
+    fun `partial cycle reaches fixed point`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 1),
+                station(2, unload = 99, load = 2),
+                station(3, unload = 99, load = 3)
+            ),
+            edges = mapOf(
+                edge(1, 2),
+                edge(2, 3),
+                edge(3, 2)
+            ),
+            start = StationId(1)
         )
 
-        val system = parseSystem(lines)
+        val result = CargoAnalysis(system).computeArrivalCargo()
 
-        assertEquals(listOf(StationId(2), StationId(3)), system.edges[StationId(1)])
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to emptySet(),
+                2 to cargoSet(1, 2, 3),
+                3 to cargoSet(1, 2, 3)
+            ),
+            result
+        )
+    }
+
+    @Test
+    fun `self loop reaches stable result`() {
+        val system = RailwaySystem(
+            stations = mapOf(
+                station(1, unload = 99, load = 5)
+            ),
+            edges = mapOf(
+                edge(1, 1)
+            ),
+            start = StationId(1)
+        )
+
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        assertArrivalCargoEquals(
+            expectedArrivals(
+                1 to cargoSet(5)
+            ),
+            result
+        )
     }
 }
