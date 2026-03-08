@@ -1,3 +1,16 @@
+/*
+ Parses a railway system from the input format:
+
+ N M
+ station_id unload load
+ ...
+ from to
+ ...
+ start_station
+
+ Performs validation of the input and throws IllegalArgumentException
+ if the format is invalid.
+*/
 fun parseSystem(lines: List<String>): RailwaySystem {
     if (lines.isEmpty()) {
         throw IllegalArgumentException("Input is empty")
@@ -5,6 +18,8 @@ fun parseSystem(lines: List<String>): RailwaySystem {
 
     var index = 0
 
+    // Reads a line and parses exactly [expected] integers.
+    // The context string is used to produce helpful error messages.
     fun nextInts(expected: Int, context: String): List<Int> {
         if (index >= lines.size) {
             throw IllegalArgumentException("Unexpected end of input while reading $context")
@@ -22,9 +37,7 @@ fun parseSystem(lines: List<String>): RailwaySystem {
         }
     }
 
-    val first = nextInts(2, "header")
-    val stationCount = first[0]
-    val trackCount = first[1]
+    val (stationCount, trackCount) = nextInts(2, "header")
 
     if (stationCount < 0 || trackCount < 0) {
         throw IllegalArgumentException("Counts must be non-negative")
