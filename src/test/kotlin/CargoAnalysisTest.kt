@@ -183,4 +183,39 @@ class CargoAnalysisTest {
         assertEquals(setOf(CargoType(1), CargoType(2), CargoType(3)), result[StationId(2)])
         assertEquals(setOf(CargoType(1), CargoType(3), CargoType(2)), result[StationId(3)])
     }
+
+    @Test
+    fun `parses minimal valid input`() {
+        val lines = listOf(
+            "1 0",
+            "1 99 5",
+            "1"
+        )
+
+        val system = parseSystem(lines)
+
+        assertEquals(StationId(1), system.start)
+        assertEquals(
+            mapOf(StationId(1) to Station(CargoType(99), CargoType(5))),
+            system.stations
+        )
+        assertEquals(emptyMap<StationId, List<StationId>>(), system.edges)
+    }
+
+    @Test
+    fun `parses branching edges correctly`() {
+        val lines = listOf(
+            "3 2",
+            "1 99 1",
+            "2 99 2",
+            "3 99 3",
+            "1 2",
+            "1 3",
+            "1"
+        )
+
+        val system = parseSystem(lines)
+
+        assertEquals(listOf(StationId(2), StationId(3)), system.edges[StationId(1)])
+    }
 }
