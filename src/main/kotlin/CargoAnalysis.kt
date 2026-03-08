@@ -24,7 +24,8 @@ class CargoAnalysis(private val system: RailwaySystem) {
 
             val updatedStation = stationsToUpdate.removeFirst()
 
-            val adjacentStations = system.edges[updatedStation].orEmpty() // stations with no outgoing edges are treated as having an empty adjacency list.
+            val adjacentStations =
+                system.edges[updatedStation].orEmpty() // stations with no outgoing edges are treated as having an empty adjacency list.
 
             // update every station in the adjacency list with the new cargo information
             for (station in adjacentStations) {
