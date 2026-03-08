@@ -78,4 +78,45 @@ class CargoAnalysisTest {
 
         assertEquals(mapOf(StationId(1) to emptySet<CargoType>()), result)
     }
+
+    @Test
+    fun `cargo propagates independently down branches`() {
+        val stations = mapOf(
+            StationId(1) to Station(CargoType(99), CargoType(1)),
+            StationId(2) to Station(CargoType(99), CargoType(2)),
+            StationId(3) to Station(CargoType(99), CargoType(3))
+        )
+
+        val edges = mapOf(
+            StationId(1) to listOf(StationId(2), StationId(3))
+        )
+
+        val system = RailwaySystem(stations, edges, StationId(1))
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        assertEquals(emptySet<CargoType>(), result[StationId(1)])
+        assertEquals(setOf(CargoType(1)), result[StationId(2)])
+        assertEquals(setOf(CargoType(1)), result[StationId(3)])
+    }
+
+    @Test
+    fun `station unload removes matching cargo before onward travel`() {
+        val stations = mapOf(
+            StationId(1) to Station(CargoType(99), CargoType(1)),
+            StationId(2) to Station(CargoType(1), CargoType(2)),
+            StationId(3) to Station(CargoType(99), CargoType(3))
+        )
+
+        val edges = mapOf(
+            StationId(1) to listOf(StationId(2)),
+            StationId(2) to listOf(StationId(3))
+        )
+
+        val system = RailwaySystem(stations, edges, StationId(1))
+        val result = CargoAnalysis(system).computeArrivalCargo()
+
+        assertEquals(emptySet<CargoType>(), result[StationId(1)])
+        assertEquals(setOf(CargoType(1)), result[StationId(2)])
+        assertEquals(setOf(CargoType(2)), result[StationId(3)])
+    }
 }
