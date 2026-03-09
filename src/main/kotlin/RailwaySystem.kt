@@ -1,4 +1,7 @@
-class RailwaySystem(
+/*
+ Core data model for the railway cargo analysis system.
+*/
+data class RailwaySystem(
     val stations: Map<StationId, Station>,
     val edges: Map<StationId, List<StationId>>,
     val start: StationId
@@ -12,5 +15,5 @@ value class CargoType(val value: Int)
 
 data class Station(
     val unload: CargoType,
-    val load: CargoType,
+    val load: CargoType
 )
