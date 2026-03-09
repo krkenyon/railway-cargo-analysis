@@ -8,7 +8,7 @@ Cargo propagates through the railway network along tracks.
 The goal is to compute, for every station, the set of cargo types that
 can arrive there starting from a given initial station.
 
-The analysis correctly handles:
+The analysis handles:
 - branching railway networks
 - cycles in the graph
 - stations that unload specific cargo types
