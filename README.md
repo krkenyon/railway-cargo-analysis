@@ -1,39 +1,91 @@
-# railway-cargo-analysis
+## Overview
 
+This project analyses cargo propagation in a railway network.
 
-A railway system consists of several stations connected by one-way tracks.
+Each station loads a cargo type and may unload another cargo type.
+Cargo propagates through the railway network along tracks.
 
-Each station is associated with two cargo types:
+The goal is to compute, for every station, the set of cargo types that
+can arrive there starting from a given initial station.
 
-One type that is unloaded when a train arrives.
+The analysis correctly handles:
+- branching railway networks
+- cycles in the graph
+- stations that unload specific cargo types
 
-One type that is loaded before a train departs.
+## Input Format
 
-All trains start from the same initial station, carrying no cargo. Trains may follow any valid route along the tracks.
+The input describes a railway system.
 
-Determine, for each station, which cargo types might be on a train when it arrives. A cargo type is considered possible if there is at least one route from the initial station that brings it to the station.
+```
+N M
 
-Rules
+station_id unload_type load_type
 
-When a train arrives at a station, first it unloads the cargo type this station consumes, then it loads the cargo type this station 
-provides.
+...
 
-Trains can carry multiple cargo types at the same time.
+from_station to_station
 
-Cargo types are abstract labels; the amount does not matter.
+...
 
-Input Format
+start_station
+```
 
-The first line contains two integers: S, T — the number of stations and tracks.
+Where:
 
-The next S lines each contain three integers: s, c_unload, c_load, where
+- `N` is the number of stations
+- `M` is the number of tracks
 
-s — the id of a station
+Each station line specifies:
+station_id unload_cargo load_cargo
 
-c_unload — the kind of goods unloaded at station s
+Each track line specifies a directed edge:
+from_station to_station
 
-c_load — the kind of goods loaded at the station s
+The final line specifies the start station.
 
-The next T lines each contain two integers: s_from, s_to indicating a directed track from station s_from to station s_to.
+## Algorithm
 
-The last line contains an integer s_0, the starting station.
+The railway network is treated as a directed graph.
+
+Cargo propagation is computed using a worklist-based dataflow algorithm.
+
+For each station we maintain:
+
+- `inCargo`: cargo that can arrive at the station
+- `outCargo`: cargo that leaves the station after unloading and loading
+
+Propagation proceeds by repeatedly updating neighbouring stations until
+no new cargo can be added (a fixed point is reached).
+
+This approach guarantees correctness even when the graph contains cycles.
+
+## Running
+
+Build the project:
+
+./gradlew build
+
+Run the program:
+
+./gradlew run < input.txt
+
+## Tests
+
+Unit tests are provided for:
+
+- Cargo propagation analysis
+- Input parsing
+- End-to-end integration
+
+Run tests with:
+
+./gradlew test
+
+## Design
+
+The implementation is structured into three main components:
+
+- `RailwaySystem` – data model of stations and tracks
+- `parseSystem` – parser for the input format with validation
+- `CargoAnalysis` – worklist-based algorithm computing cargo propagation
